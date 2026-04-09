@@ -73,12 +73,20 @@ Output:
 
 1. **로그 초기화** (위 0번 참조).
 
-2. `plan.md` 를 읽어 지정된 커밋 번호의 작업 내용과 use case 를 파악한다.
-   - 로그: `[ORCHESTRATOR] plan loaded — commit N 내용 요약`
+2. **컨텍스트 파악**
+   - `plan.md` 를 읽어 지정된 커밋 번호의 작업 내용과 use case 를 파악한다.
+   - 해당 커밋의 **변경 대상 파일/영역이 이미 존재하는지** 확인한다 (Glob/Read).
+   - 이미 존재하면 → 이것은 **재실행 (수정/보강)** 이다. 기존 코드 상태를 요약해 둔다.
+   - 존재하지 않으면 → 이것은 **신규 구현**이다.
+   - 로그: `[ORCHESTRATOR] plan loaded — commit N 내용 요약`, `mode: new | patch (기존 파일: ...)`
 
 3. **Programmer 루프 (최대 3회 시도)**
    - `programmer` 서브에이전트를 호출해 해당 커밋의 코드를 작성/수정하게 한다.
-     - programmer 에게는 plan.md 의 해당 커밋 섹션과 (있다면) 직전 실패 원인을 전달한다.
+     - programmer 에게는 아래를 전달한다:
+       - plan.md 의 해당 커밋 섹션
+       - **실행 모드**: `new` (신규) 또는 `patch` (재실행)
+       - `patch` 인 경우: 이미 존재하는 파일 목록과 현재 상태 요약
+       - (있다면) 직전 실패 원인
      - programmer 는 **테스트 코드를 절대 수정할 수 없다**. 프로덕션 코드만 수정한다.
      - 로그: 호출 전 `[ORCHESTRATOR → programmer]` 입력, 반환 후 `[programmer → ORCHESTRATOR]` 출력.
    - programmer 가 끝나면 오케스트레이터가 직접 테스트를 실행한다 (Bash).
