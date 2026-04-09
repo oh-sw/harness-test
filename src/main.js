@@ -1,23 +1,10 @@
 // Logical canvas resolution kept small so integer CSS scaling gives crisp pixels.
 export const GAME_TITLE = 'FIGHTING GAME';
 
+import { initSelectScreen } from './screens/select.js';
+
 const CANVAS_W = 320;
 const CANVAS_H = 180;
-
-function drawTitle(ctx) {
-  ctx.imageSmoothingEnabled = false;
-
-  // Background
-  ctx.fillStyle = '#000';
-  ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
-
-  // Title text rendered in monospace to preserve pixel-font feel
-  ctx.fillStyle = '#fff';
-  ctx.font = 'bold 16px "Courier New", monospace';
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.fillText(GAME_TITLE, CANVAS_W / 2, CANVAS_H / 2);
-}
 
 function init() {
   const canvas = document.getElementById('game-canvas');
@@ -25,7 +12,18 @@ function init() {
   canvas.height = CANVAS_H;
 
   const ctx = canvas.getContext('2d');
-  drawTitle(ctx);
+  ctx.imageSmoothingEnabled = false;
+
+  // Show the character select screen on load.
+  // Each screen init returns a destroy() function for teardown when routing away.
+  let destroyCurrent = initSelectScreen(canvas);
+
+  canvas.addEventListener('game:start', (evt) => {
+    // Future commits will route to the battle screen here.
+    // For now just log so QA can verify the event fires.
+    console.log('game:start', evt.detail);
+    if (destroyCurrent) destroyCurrent();
+  });
 }
 
 // Only run in a real browser context (not when imported by the test runner)
