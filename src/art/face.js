@@ -132,7 +132,7 @@ export function generateFacePixels(faceParams) {
 
 // Draws the face pixel array (FACE_W x FACE_H) onto ctx at pixel position (x, y).
 // scale controls how many canvas pixels each face pixel occupies.
-export function drawFace(ctx, x, y, faceParams, scale = 2) {
+export function drawFace(ctx, x, y, faceParams, scale = 4) {
   ctx.imageSmoothingEnabled = false;
   const pixels = generateFacePixels(faceParams);
   for (let r = 0; r < FACE_H; r++) {

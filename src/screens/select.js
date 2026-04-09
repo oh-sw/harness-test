@@ -9,13 +9,17 @@ const COLOR_DEFAULT = '#555555';
 const COLOR_BG = '#111111';
 const COLOR_NAME = '#FFFFFF';
 
-// Card layout (all values in logical canvas pixels)
-const CARD_W = 48;
-const CARD_H = 64;
-const CARD_GAP = 8;
-const FACE_SCALE = 2; // each face pixel → 2 canvas pixels (32x32 rendered)
+// Card layout (all values in logical canvas pixels, scaled 2x for 640x360 resolution)
+const CARD_W = 96;
+const CARD_H = 128;
+
+// START button dimensions
+const START_BTN_W = 96;
+const START_BTN_H = 24;
+const CARD_GAP = 16;
+const FACE_SCALE = 4; // each face pixel → 4 canvas pixels (64x64 rendered)
 const FACE_OFFSET_X = (CARD_W - FACE_W * FACE_SCALE) / 2;
-const FACE_OFFSET_Y = 6;
+const FACE_OFFSET_Y = 12;
 
 // --- Pure reducer ---------------------------------------------------------
 
@@ -23,12 +27,22 @@ const FACE_OFFSET_Y = 6;
 export const INITIAL_SELECT_STATE = { p1: null, p2: null };
 
 // Returns a new state object; does not mutate the previous state.
+// If a player tries to select the same character as the other player,
+// the selection is rejected and warning: true is set in the returned state.
 export function selectReducer(state, action) {
   switch (action.type) {
-    case 'SELECT_1P':
+    case 'SELECT_1P': {
+      if (state.p2 !== null && state.p2 === action.characterId) {
+        return { ...state, warning: true };
+      }
       return { ...state, p1: action.characterId };
-    case 'SELECT_2P':
+    }
+    case 'SELECT_2P': {
+      if (state.p1 !== null && state.p1 === action.characterId) {
+        return { ...state, warning: true };
+      }
       return { ...state, p2: action.characterId };
+    }
     default:
       return state;
   }
@@ -45,13 +59,50 @@ export function initSelectScreen(canvas) {
   state = selectReducer(state, { type: 'SELECT_1P', characterId: CHARACTERS[0].id });
   state = selectReducer(state, { type: 'SELECT_2P', characterId: CHARACTERS[1].id });
 
+  // Warning modal state
+  let warningVisible = false;
+  let warningTimer = null;
+
   // Layout: centre the row of cards
   const totalW = CHARACTERS.length * CARD_W + (CHARACTERS.length - 1) * CARD_GAP;
   const startX = Math.floor((canvas.width - totalW) / 2);
-  const startY = Math.floor((canvas.height - CARD_H) / 2) - 12;
+  const startY = Math.floor((canvas.height - CARD_H) / 2) - 24;
 
   function getCardX(index) {
     return startX + index * (CARD_W + CARD_GAP);
+  }
+
+  function showWarning() {
+    warningVisible = true;
+    render();
+    if (warningTimer !== null) {
+      clearTimeout(warningTimer);
+    }
+    warningTimer = setTimeout(() => {
+      warningVisible = false;
+      warningTimer = null;
+      render();
+    }, 3000);
+  }
+
+  function drawWarningModal() {
+    const modalW = 280;
+    const modalH = 48;
+    const modalX = Math.floor((canvas.width - modalW) / 2);
+    const modalY = Math.floor((canvas.height - modalH) / 2);
+
+    // Modal background
+    ctx.fillStyle = '#000000';
+    ctx.fillRect(modalX, modalY, modalW, modalH);
+
+    // Pixel-art border (4px)
+    drawFrame(ctx, modalX, modalY, modalW, modalH, '#FF3A3A', 4);
+
+    // Warning text
+    ctx.fillStyle = '#FFFFFF';
+    ctx.font = 'bold 14px "Courier New", monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('같은 캐릭터를 선택할 수 없습니다', canvas.width / 2, modalY + modalH / 2 + 5);
   }
 
   function render() {
@@ -60,21 +111,21 @@ export function initSelectScreen(canvas) {
 
     // Header label
     ctx.fillStyle = COLOR_NAME;
-    ctx.font = 'bold 8px "Courier New", monospace';
+    ctx.font = 'bold 16px "Courier New", monospace';
     ctx.textAlign = 'center';
-    ctx.fillText('SELECT CHARACTER', canvas.width / 2, 12);
+    ctx.fillText('SELECT CHARACTER', canvas.width / 2, 24);
 
     // 1P / 2P labels above cards
-    ctx.font = '6px "Courier New", monospace';
+    ctx.font = '12px "Courier New", monospace';
     CHARACTERS.forEach((char, i) => {
       const cx = getCardX(i);
       if (state.p1 === char.id) {
         ctx.fillStyle = COLOR_1P;
-        ctx.fillText('1P', cx + CARD_W / 2, startY - 6);
+        ctx.fillText('1P', cx + CARD_W / 2, startY - 12);
       }
       if (state.p2 === char.id) {
         ctx.fillStyle = COLOR_2P;
-        ctx.fillText('2P', cx + CARD_W / 2, startY - (state.p1 === char.id ? 12 : 6));
+        ctx.fillText('2P', cx + CARD_W / 2, startY - (state.p1 === char.id ? 24 : 12));
       }
     });
 
@@ -92,34 +143,35 @@ export function initSelectScreen(canvas) {
 
       // Name label
       ctx.fillStyle = COLOR_NAME;
-      ctx.font = '5px "Courier New", monospace';
+      ctx.font = '10px "Courier New", monospace';
       ctx.textAlign = 'center';
-      ctx.fillText(char.name, cx + CARD_W / 2, cy + CARD_H - 6);
+      ctx.fillText(char.name, cx + CARD_W / 2, cy + CARD_H - 12);
 
       // Frame — colour depends on selection state
-      let frameColor = COLOR_DEFAULT;
-      if (state.p1 === char.id && state.p2 === char.id) {
-        // Both players chose this character — split: draw p1 frame on top half, p2 on bottom
-        drawFrame(ctx, cx, cy, CARD_W, CARD_H / 2, COLOR_1P, 2);
-        drawFrame(ctx, cx, cy + CARD_H / 2, CARD_W, CARD_H / 2, COLOR_2P, 2);
-        return;
-      } else if (state.p1 === char.id) {
-        frameColor = COLOR_1P;
+      if (state.p1 === char.id) {
+        drawFrame(ctx, cx, cy, CARD_W, CARD_H, COLOR_1P, 4);
       } else if (state.p2 === char.id) {
-        frameColor = COLOR_2P;
+        drawFrame(ctx, cx, cy, CARD_W, CARD_H, COLOR_2P, 4);
+      } else {
+        drawFrame(ctx, cx, cy, CARD_W, CARD_H, COLOR_DEFAULT, 4);
       }
-      drawFrame(ctx, cx, cy, CARD_W, CARD_H, frameColor, 2);
     });
 
     // START button
-    const startBtnY = startY + CARD_H + 14;
+    const startBtnY = startY + CARD_H + 28;
+    const startBtnX = Math.floor(canvas.width / 2 - START_BTN_W / 2);
     const canStart = state.p1 !== null && state.p2 !== null;
     ctx.fillStyle = canStart ? '#22CC44' : '#444444';
-    ctx.fillRect(canvas.width / 2 - 24, startBtnY, 48, 12);
+    ctx.fillRect(startBtnX, startBtnY, START_BTN_W, START_BTN_H);
     ctx.fillStyle = '#000000';
-    ctx.font = 'bold 7px "Courier New", monospace';
+    ctx.font = 'bold 14px "Courier New", monospace';
     ctx.textAlign = 'center';
-    ctx.fillText('START', canvas.width / 2, startBtnY + 9);
+    ctx.fillText('START', canvas.width / 2, startBtnY + 17);
+
+    // Warning modal (drawn on top if visible)
+    if (warningVisible) {
+      drawWarningModal();
+    }
   }
 
   function handleClick(evt) {
@@ -131,12 +183,13 @@ export function initSelectScreen(canvas) {
     const ly = Math.floor((evt.clientY - rect.top) * scaleY);
 
     // Check START button
-    const startBtnY = startY + CARD_H + 14;
+    const startBtnY = startY + CARD_H + 28;
+    const startBtnX = Math.floor(canvas.width / 2 - START_BTN_W / 2);
     if (
-      lx >= canvas.width / 2 - 24 &&
-      lx <= canvas.width / 2 + 24 &&
+      lx >= startBtnX &&
+      lx <= startBtnX + START_BTN_W &&
       ly >= startBtnY &&
-      ly <= startBtnY + 12 &&
+      ly <= startBtnY + START_BTN_H &&
       state.p1 !== null &&
       state.p2 !== null
     ) {
@@ -153,26 +206,40 @@ export function initSelectScreen(canvas) {
     CHARACTERS.forEach((char, i) => {
       const cx = getCardX(i);
       if (lx >= cx && lx < cx + CARD_W && ly >= startY && ly < startY + CARD_H) {
+        let nextState;
         if (evt.button === 2) {
-          state = selectReducer(state, { type: 'SELECT_2P', characterId: char.id });
+          nextState = selectReducer(state, { type: 'SELECT_2P', characterId: char.id });
         } else {
-          state = selectReducer(state, { type: 'SELECT_1P', characterId: char.id });
+          nextState = selectReducer(state, { type: 'SELECT_1P', characterId: char.id });
         }
-        render();
+
+        if (nextState.warning) {
+          // Show warning but do not update the main selection state
+          showWarning();
+        } else {
+          state = nextState;
+          render();
+        }
       }
     });
   }
 
-  canvas.addEventListener('click', handleClick);
-  canvas.addEventListener('contextmenu', (evt) => {
+  function handleContextMenu(evt) {
     evt.preventDefault();
     handleClick({ clientX: evt.clientX, clientY: evt.clientY, button: 2 });
-  });
+  }
+
+  canvas.addEventListener('click', handleClick);
+  canvas.addEventListener('contextmenu', handleContextMenu);
 
   render();
 
   // Return a teardown function so the router can clean up listeners
   return function destroy() {
     canvas.removeEventListener('click', handleClick);
+    canvas.removeEventListener('contextmenu', handleContextMenu);
+    if (warningTimer !== null) {
+      clearTimeout(warningTimer);
+    }
   };
 }

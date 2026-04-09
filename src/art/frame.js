@@ -2,7 +2,7 @@
 // Draws a rectangular border of borderSize pixels at (x, y) with dimensions (w x h).
 // The interior is NOT filled — callers draw the content before or after calling this.
 
-export function drawFrame(ctx, x, y, w, h, color, borderSize = 3) {
+export function drawFrame(ctx, x, y, w, h, color, borderSize = 4) {
   ctx.imageSmoothingEnabled = false;
   ctx.fillStyle = color;
 

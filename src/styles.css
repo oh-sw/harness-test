@@ -19,7 +19,7 @@ body {
 
 #game-container {
   position: relative;
-  /* CSS integer scaling: 320x180 * 4 = 1280x720 */
+  /* CSS integer scaling: 640x360 * 2 = 1280x720 */
   width: 1280px;
   height: 720px;
 }

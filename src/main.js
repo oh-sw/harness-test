@@ -3,8 +3,8 @@ export const GAME_TITLE = 'FIGHTING GAME';
 
 import { initSelectScreen } from './screens/select.js';
 
-const CANVAS_W = 320;
-const CANVAS_H = 180;
+const CANVAS_W = 640;
+const CANVAS_H = 360;
 
 function init() {
   const canvas = document.getElementById('game-canvas');
