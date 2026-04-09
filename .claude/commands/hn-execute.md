@@ -97,7 +97,9 @@ Output:
 
 4. **QA 단계**
    - `qa` 서브에이전트를 호출한다.
-   - qa 에게는 plan.md 의 해당 커밋 use case 목록을 전달한다.
+   - qa 에게는 아래를 전달한다:
+     - plan.md 의 해당 커밋 use case 목록
+     - **`qa-mode`**: 이 프로젝트의 스택에 따라 `browser` 또는 `api` 를 지정한다 (HTML/CSS/JS 프로젝트 → `browser`, 서버 프로젝트 → `api`)
    - qa 는 프로그램을 실제 실행하여 외부에서 관찰 가능한 use case 동작만 검증한다 (내부 코드 리뷰 금지).
    - 로그: 호출 전 `[ORCHESTRATOR → qa]` 입력, 반환 후 `[qa → ORCHESTRATOR]` 출력.
    - qa 가 실패를 리포트하면 → 로그에 `[ORCHESTRATOR] decision: QA failed → retry programmer` 기록 후 3번의 programmer 루프로 돌아간다 (시도 카운트는 유지 / 3회 초과 시 중단).

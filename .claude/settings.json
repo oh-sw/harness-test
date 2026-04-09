@@ -9,7 +9,10 @@
       "Grep",
       "Bash(ls:*)",
       "Bash(cat:*)",
-      "Bash(echo:*)"
+      "Bash(echo:*)",
+      "Bash(mkdir -p agent_logs*)",
+      "Bash(echo * >> agent_logs/*)",
+      "Bash(printf * >> agent_logs/*)"
     ],
     "deny": [
       "Bash(rm -rf:*)",
@@ -23,5 +26,7 @@
     "SessionStart": [],
     "Stop": []
   },
-  "env": {}
+  "env": {
+    "PLAYWRIGHT_BROWSERS_PATH": "/tmp/pw-browsers"
+  }
 }
