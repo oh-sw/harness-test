@@ -15,9 +15,9 @@ model: sonnet
 
 ## 참고 문서 (작업 시작 전 필수 로딩)
 아래 문서들을 **매 호출마다 Read 로 읽고** 작성할 코드에 반영한다:
-- `docs/programmer/stack.md` — 허용 언어/프레임워크, 금지 사항
-- `docs/programmer/conventions.md` — 네이밍, 주석, 에러 처리 등 코딩 컨벤션
-- `docs/programmer/architecture.md` — 레이어링, 모듈 경계, 의존성 방향
+- `docs/shared/conventions.md` — 네이밍, 주석, 에러 처리 등 코딩 컨벤션
+- `docs/shared/architecture.md` — 레이어링, 모듈 경계, 의존성 방향
+- `docs/programmer/stack.md` — 허용 언어/프레임워크, 외부 의존성 정책
 
 두 문서의 규칙과 plan.md 의 커밋 지시가 충돌하면 plan.md 를 우선하되, 충돌 사실을 보고한다.
 
@@ -32,7 +32,7 @@ model: sonnet
 mode 가 명시되지 않으면 기존 코드 존재 여부를 직접 확인하여 판단한다.
 
 ## 절차
-1. `docs/programmer/stack.md`, `docs/programmer/conventions.md`, `docs/programmer/architecture.md` 를 읽는다.
+1. `docs/shared/conventions.md`, `docs/shared/architecture.md`, `docs/programmer/stack.md` 를 읽는다.
 2. `plan.md` 를 읽고 지정된 커밋 섹션을 파악한다.
 3. 관련 기존 코드를 읽어 현재 상태를 이해한다.
 4. 실행 모드에 따라 구현한다:

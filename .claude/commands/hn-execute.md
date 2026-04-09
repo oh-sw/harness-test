@@ -101,15 +101,26 @@ Output:
    - qa 는 프로그램을 실제 실행하여 외부에서 관찰 가능한 use case 동작만 검증한다 (내부 코드 리뷰 금지).
    - 로그: 호출 전 `[ORCHESTRATOR → qa]` 입력, 반환 후 `[qa → ORCHESTRATOR]` 출력.
    - qa 가 실패를 리포트하면 → 로그에 `[ORCHESTRATOR] decision: QA failed → retry programmer` 기록 후 3번의 programmer 루프로 돌아간다 (시도 카운트는 유지 / 3회 초과 시 중단).
-   - qa 가 통과를 리포트하면 → 로그에 세션 종료를 기록하고 커밋 메시지 초안을 출력한 뒤 `/hn-execute` 를 종료한다.
+   - qa 가 통과를 리포트하면 → 로그에 `[ORCHESTRATOR] decision: QA passed → proceed to refactoring` 기록 후 5번으로 진행.
 
-5. **세션 종료 로그**
+5. **Refactorer 단계**
+   - `refactorer` 서브에이전트를 호출한다.
+   - refactorer 에게는 **이번 커밋에서 수정/생성된 파일 목록**을 전달한다.
+   - refactorer 는 동작을 유지하면서 가독성/유지보수성만 개선한다 (새 기능 추가 금지).
+   - 로그: 호출 전 `[ORCHESTRATOR → refactorer]` 입력, 반환 후 `[refactorer → ORCHESTRATOR]` 출력.
+   - refactorer 가 "리팩토링 불필요" 로 보고하면 → 로그에 `[ORCHESTRATOR] decision: no refactoring needed → done` 기록 후 6번으로 진행.
+   - refactorer 가 변경을 수행하면 → 오케스트레이터가 **테스트를 다시 실행**한다.
+     - 테스트 통과 → 로그에 `[ORCHESTRATOR] decision: post-refactor tests passed → done` 기록 후 6번으로 진행.
+     - 테스트 실패 → refactorer 의 변경을 **`git checkout -- <변경파일>`로 되돌리고**, 로그에 `[ORCHESTRATOR] decision: post-refactor tests failed → reverted refactoring` 기록 후 6번으로 진행. (리팩토링 실패로 전체 워크플로우를 중단하지 않는다.)
+
+6. **세션 종료 로그**
 
 ```
 =====================================
 [hn-execute] Session End
 Result: PASS | FAIL
 Total programmer attempts: N
+Refactoring: applied | reverted | skipped
 Time: <ISO 8601 타임스탬프>
 =====================================
 ```
@@ -117,7 +128,7 @@ Time: <ISO 8601 타임스탬프>
 ---
 
 ## 제약
-- 직접 프로덕션 코드를 편집하지 마라. 반드시 programmer 를 통해야 한다.
+- 직접 프로덕션 코드를 편집하지 마라. 반드시 programmer 또는 refactorer 를 통해야 한다.
 - 직접 use case 를 검증하지 마라. 반드시 qa 를 통해야 한다.
 - 에이전트는 한 번에 하나만 실행한다.
 - **로그 누락 금지.** 모든 에이전트 호출/반환, 테스트 실행, 흐름 분기에서 반드시 로그를 기록한다.
