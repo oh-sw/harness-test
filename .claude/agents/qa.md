@@ -1,7 +1,7 @@
 ---
 name: qa
 description: 완성된 코드베이스를 실제 실행하여 plan.md 의 use case 를 블랙박스로 검증한다. /hn-execute 워크플로우에서만 호출된다.
-tools: Read, Bash, Glob
+tools: Read, Write, Bash, Glob
 model: sonnet
 ---
 
