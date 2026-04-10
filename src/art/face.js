@@ -17,6 +17,13 @@ const FACE_H = 16;
 
 const TRANSPARENT = null;
 
+// Skin shadow on the nose bridge
+const COLOR_NOSE_SHADOW = '#C4956A';
+const COLOR_EYE_WHITE = '#FFFFFF';
+const COLOR_MOUTH_DARK = '#8B3A3A';
+const COLOR_MOUTH_MID = '#C0504F';
+const COLOR_STUBBLE = '#6B4C3B';
+
 // Returns a flat array of FACE_W * FACE_H colour strings (or null for transparent).
 // The result is fully determined by faceParams — no randomness at call time.
 export function generateFacePixels(faceParams) {
@@ -84,10 +91,10 @@ export function generateFacePixels(faceParams) {
 
   // --- Eyes (row 6, cols 5-6 and 9-10) ---
   // White of eye
-  set(6, 5, '#FFFFFF');
-  set(6, 6, '#FFFFFF');
-  set(6, 9, '#FFFFFF');
-  set(6, 10, '#FFFFFF');
+  set(6, 5, COLOR_EYE_WHITE);
+  set(6, 6, COLOR_EYE_WHITE);
+  set(6, 9, COLOR_EYE_WHITE);
+  set(6, 10, COLOR_EYE_WHITE);
   // Pupil
   set(6, 6, eyeColor);
   set(6, 9, eyeColor);
@@ -99,22 +106,22 @@ export function generateFacePixels(faceParams) {
 
   // --- Nose (rows 8-10, col 7-8) ---
   set(8, 7, skinTone);
-  set(9, 7, '#C4956A');
-  set(9, 8, '#C4956A');
+  set(9, 7, COLOR_NOSE_SHADOW);
+  set(9, 8, COLOR_NOSE_SHADOW);
   set(10, 7, skinTone);
   set(10, 8, skinTone);
 
   // --- Mouth (row 11) ---
-  set(11, 6, '#8B3A3A');
-  set(11, 7, '#C0504F');
-  set(11, 8, '#C0504F');
-  set(11, 9, '#8B3A3A');
+  set(11, 6, COLOR_MOUTH_DARK);
+  set(11, 7, COLOR_MOUTH_MID);
+  set(11, 8, COLOR_MOUTH_MID);
+  set(11, 9, COLOR_MOUTH_DARK);
 
   // --- Beard ---
   if (beard === 'stubble') {
     const stubbleCols = [4, 5, 6, 9, 10, 11];
     for (const c of stubbleCols) {
-      set(12, c, '#6B4C3B');
+      set(12, c, COLOR_STUBBLE);
     }
   } else if (beard === 'full') {
     for (let c = 4; c <= 11; c++) {

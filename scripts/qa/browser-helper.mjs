@@ -35,7 +35,10 @@ export async function createBrowserTest(url, options = {}) {
     viewportHeight = 720,
   } = options;
 
-  const browser = await chromium.launch({ headless });
+  const browser = await chromium.launch({
+    headless,
+    args: ['--allow-file-access-from-files'],
+  });
   const context = await browser.newContext({
     viewport: { width: viewportWidth, height: viewportHeight },
   });

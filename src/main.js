@@ -1,10 +1,8 @@
-// Logical canvas resolution kept small so integer CSS scaling gives crisp pixels.
-export const GAME_TITLE = 'FIGHTING GAME';
-
+// Logical canvas resolution: 1280x720 (HD, 1:1 CSS display).
 import { initSelectScreen } from './screens/select.js';
 
-const CANVAS_W = 640;
-const CANVAS_H = 360;
+const CANVAS_W = 1280;
+const CANVAS_H = 720;
 
 function init() {
   const canvas = document.getElementById('game-canvas');
@@ -22,7 +20,7 @@ function init() {
     // Future commits will route to the battle screen here.
     // For now just log so QA can verify the event fires.
     console.log('game:start', evt.detail);
-    if (destroyCurrent) destroyCurrent();
+    destroyCurrent();
   });
 }
 
