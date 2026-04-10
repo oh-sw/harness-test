@@ -241,8 +241,46 @@ export function initSelectScreen(canvas) {
     handleClick({ clientX: evt.clientX, clientY: evt.clientY, button: 2 });
   }
 
+  // Digit1~Digit5 → 1P, Digit6~Digit0 → 2P
+  // Using event.code to be IME-independent
+  const KEY_1P_MAP = { Digit1: 0, Digit2: 1, Digit3: 2, Digit4: 3, Digit5: 4 };
+  const KEY_2P_MAP = { Digit6: 0, Digit7: 1, Digit8: 2, Digit9: 3, Digit0: 4 };
+
+  function applyKeySelect(actionType, charIndex) {
+    const char = CHARACTERS[charIndex];
+    const nextState = selectReducer(state, { type: actionType, characterId: char.id });
+    if (nextState.warning) {
+      showWarning();
+    } else {
+      state = nextState;
+      render();
+    }
+  }
+
+  function handleKeydown(evt) {
+    if (evt.code in KEY_1P_MAP) {
+      applyKeySelect('SELECT_1P', KEY_1P_MAP[evt.code]);
+      return;
+    }
+
+    if (evt.code in KEY_2P_MAP) {
+      applyKeySelect('SELECT_2P', KEY_2P_MAP[evt.code]);
+      return;
+    }
+
+    if (evt.code === 'Enter' && state.p1 !== null && state.p2 !== null) {
+      canvas.dispatchEvent(
+        new CustomEvent('game:start', {
+          bubbles: true,
+          detail: { p1: state.p1, p2: state.p2 },
+        })
+      );
+    }
+  }
+
   canvas.addEventListener('click', handleClick);
   canvas.addEventListener('contextmenu', handleContextMenu);
+  window.addEventListener('keydown', handleKeydown);
 
   render();
 
@@ -250,6 +288,7 @@ export function initSelectScreen(canvas) {
   return function destroy() {
     canvas.removeEventListener('click', handleClick);
     canvas.removeEventListener('contextmenu', handleContextMenu);
+    window.removeEventListener('keydown', handleKeydown);
     if (warningTimer !== null) {
       clearTimeout(warningTimer);
     }

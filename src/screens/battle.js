@@ -127,11 +127,21 @@ export function initBattleScreen(canvas, { p1: p1Id, p2: p2Id }) {
     [p1, p2] = preventOverlap(p1, p2);
   }
 
+  // Derives the visual action state for sprite selection from fighter fields.
+  // Priority: kickCharging > punch/kick attackState > blocking > idle
+  function getActionState(fighter) {
+    if (fighter.kickCharging) return 'kickCharge';
+    if (fighter.attackState === 'punch') return 'punch';
+    if (fighter.attackState === 'kick')  return 'kick';
+    if (fighter.blocking) return 'block';
+    return 'idle';
+  }
+
   function render() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     drawStage(ctx);
-    drawBody(ctx, p1.x, p1.y, p1.faceParams);
-    drawBody(ctx, p2.x, p2.y, p2.faceParams);
+    drawBody(ctx, p1.x, p1.y, p1.faceParams, getActionState(p1));
+    drawBody(ctx, p2.x, p2.y, p2.faceParams, getActionState(p2));
     // HUD: face portraits in top corners, standard fighting game pattern
     drawFace(ctx, 50, 80, p1.faceParams, 4);
     drawFace(ctx, 1150, 80, p2.faceParams, 4);
@@ -145,7 +155,7 @@ export function initBattleScreen(canvas, { p1: p1Id, p2: p2Id }) {
       x: f.x, y: f.y, vy: f.vy,
       hp: f.hp,
       blocking: f.blocking,
-      attackState: f.attackState,
+      attackState: f.attackState ?? 'idle',
       kickCharging: f.kickCharging,
       inputLocked: f.inputLocked,
     };
