@@ -11,7 +11,7 @@
       "Bash(printf:*)",
       "Bash(mkdir -p agent_logs)",
       "Bash(npx vitest run*)",
-      "Bash(node qa_test.mjs*)",
+      "Bash(node qa_test_commit_*)",
       "Bash(npm test:*)"
     ],
     "deny": [

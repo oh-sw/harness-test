@@ -24,11 +24,11 @@
 
 1. `plan.md` 에서 해당 커밋을 읽는다.
 2. **Programmer + QA 스크립트 작성 (병렬)**
-   - `programmer` 가 프로덕션 코드를 작성하고, `qa` 가 테스트 스크립트(`qa_test.mjs`)를 작성한다.
+   - `programmer` 가 프로덕션 코드를 작성하고, `qa` 가 테스트 스크립트(`qa_test_commit_{N}.mjs`)를 작성한다.
    - qa 는 plan.md 만 보고 스크립트를 작성하므로 programmer 와 의존성 없음.
    - qa 는 **세션당 한 번만** 호출된다.
 3. **QA 실행 루프 (최대 3회)**
-   - 오케스트레이터가 `node qa_test.mjs` 를 실행한다.
+   - 오케스트레이터가 `node qa_test_commit_{N}.mjs` 를 실행한다.
    - PASS → Refactorer 단계로 진행.
    - FAIL → programmer 만 재호출 후 다시 QA 실행 (카운트 +1).
    - 3회 실패 → 사용자에게 보고하고 중단.

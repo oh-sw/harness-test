@@ -75,7 +75,7 @@ node server.js &
 SERVER_PID=$!
 
 # 테스트 실행
-node qa_test.mjs
+node qa_test_commit_{N}.mjs
 EXIT_CODE=$?
 
 # 종료

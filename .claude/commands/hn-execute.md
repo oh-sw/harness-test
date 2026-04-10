@@ -6,7 +6,8 @@ argument-hint: <커밋 번호>
 대상 커밋 번호: $ARGUMENTS
 
 너는 이 워크플로우의 **오케스트레이터**다. 직접 코드를 작성하지 말고, 아래 순서대로 서브에이전트를 호출하라.
-**동시에 두 개 이상의 에이전트를 실행하지 마라. 항상 하나씩 순차 실행한다.**
+
+> **`{N}` 규칙**: 이 문서에서 `{N}` 은 위의 **대상 커밋 번호**($ARGUMENTS)를 의미한다. 파일명·명령어에 `{N}` 이 나오면 실제 커밋 번호로 치환하라. (예: 커밋 3 → `qa_test_commit_3.mjs`)
 
 ---
 
@@ -113,7 +114,7 @@ Output:
      - `qa-mode`: HTML/CSS/JS 프로젝트 → `browser`, 서버 프로젝트 → `api`
      - 커밋 번호
      - plan.md 의 해당 커밋 use case 목록
-   - qa 는 `qa_test.mjs` 를 작성하고 반환한다 (Bash 권한 없음).
+   - qa 는 `qa_test_commit_{N}.mjs` 를 작성하고 반환한다 (Bash 권한 없음).
    - 로그: 호출 전 `[ORCHESTRATOR → qa]` 입력, 반환 후 `[qa → ORCHESTRATOR]` 출력.
 
    > **qa 는 plan.md 만 읽고 스크립트를 작성하므로 programmer 와 의존성이 없다.**
@@ -124,7 +125,7 @@ Output:
    3a(programmer)와 3b(qa) 가 **모두 완료된 후** 이 단계를 시작한다.
 
    **4a. 오케스트레이터가 QA 스크립트를 실행한다**
-   - `node qa_test.mjs` 를 Bash 로 실행한다.
+   - `node qa_test_commit_{N}.mjs` 를 Bash 로 실행한다.
    - 로그: `[ORCHESTRATOR] QA script execution` — 실행 명령, stdout 전체, 종료코드.
 
    **4b. 결과에 따른 분기**
