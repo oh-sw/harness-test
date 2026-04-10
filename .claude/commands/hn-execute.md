@@ -50,7 +50,7 @@ argument-hint: <커밋 번호>
      - plan.md 의 해당 커밋 섹션
      - **실행 모드**: `new` (신규) 또는 `patch` (재실행)
      - `patch` 인 경우: 이미 존재하는 파일 목록과 현재 상태 요약
-   - programmer 는 **테스트 코드를 절대 수정할 수 없다**. 프로덕션 코드만 수정한다.
+   - programmer 는 **QA 스크립트(`qa_test_commit_*.mjs`)를 수정할 수 없다**. 프로덕션 코드와 `test/` 하위 테스트는 수정 가능.
    - 로그: 호출 전 `[ORCHESTRATOR → programmer]` 입력, 반환 후 `[programmer → ORCHESTRATOR]` 출력.
 
    **3b. qa 서브에이전트** — QA 테스트 스크립트 작성
@@ -62,7 +62,6 @@ argument-hint: <커밋 번호>
    - 로그: 호출 전 `[ORCHESTRATOR → qa]` 입력, 반환 후 `[qa → ORCHESTRATOR]` 출력.
 
    > **qa 는 plan.md 만 읽고 스크립트를 작성하므로 programmer 와 의존성이 없다.**
-   > qa 스크립트는 한 번만 작성하면 된다. 이후 재시도에서 다시 호출하지 않는다.
 
 4. **QA 실행 루프 (최대 3회 시도)**
 
@@ -74,11 +73,20 @@ argument-hint: <커밋 번호>
 
    **4b. 결과에 따른 분기**
    - 종료코드 0 (PASS) → 로그에 `[ORCHESTRATOR] decision: QA passed → proceed to refactoring` 기록 후 5번으로 진행.
-   - 종료코드 1 (FAIL) → stdout 의 FAIL 사유를 가지고:
-     - 로그에 `[ORCHESTRATOR] decision: QA failed → retry programmer (N/3)` 기록.
-     - **programmer 만 재호출**한다 (qa 스크립트는 이미 작성 완료, 재작성하지 않음).
-       - programmer 에게 FAIL 사유를 전달한다.
-     - programmer 완료 후 4a 로 돌아가 QA 스크립트를 다시 실행한다.
+   - 종료코드 1 (FAIL) → 오케스트레이터가 **실패 원인을 분류**한다:
+
+     **원인 분류 기준:**
+     - **구현 버그**: 프로덕션 코드의 로직/상태/동작이 plan.md 의 use case 를 충족하지 못함 (예: 상태값 누락, 이벤트 미처리, 렌더링 로직 오류)
+     - **QA 스크립트 버그**: 테스트 스크립트 자체가 잘못된 가정을 하고 있음 (예: 잘못된 좌표/셀렉터, 존재하지 않는 속성 참조, 프로덕션 코드의 실제 구조와 불일치하는 검증 로직)
+
+     **분류 후 행동:**
+     - **구현 버그** → 로그에 `[ORCHESTRATOR] decision: implementation bug → retry programmer (N/3)` 기록.
+       - **programmer 를 재호출**한다. FAIL 사유를 전달한다.
+       - programmer 완료 후 4a 로 돌아간다.
+     - **QA 스크립트 버그** → 로그에 `[ORCHESTRATOR] decision: QA script bug → retry qa` 기록.
+       - **qa 를 재호출**한다. FAIL 사유와 함께 **현재 프로덕션 코드의 관련 부분** (파일 경로, 구조 요약) 을 전달한다.
+       - qa 가 `qa_test_commit_{N}.mjs` 를 재작성한 후 4a 로 돌아간다.
+       - qa 재호출은 시도 카운트에 포함하지 않는다 (구현을 바꾼 게 아니므로).
      - 3회 시도해도 실패하면 로그에 `[ORCHESTRATOR] decision: max retries reached → abort` 기록 후 사용자에게 실패 원인을 보고하고 중단한다.
 
 5. **Refactorer 단계**
@@ -100,7 +108,6 @@ argument-hint: <커밋 번호>
 - 직접 프로덕션 코드를 편집하지 마라. 반드시 programmer 또는 refactorer 를 통해야 한다.
 - 직접 use case 를 검증하지 마라. 반드시 qa 를 통해야 한다.
 - **3번(병렬 실행)에서만** programmer 와 qa 를 동시에 실행한다. 그 외에는 에이전트를 한 번에 하나만 실행한다.
-- **qa 서브에이전트는 세션당 한 번만 호출한다.** QA 실패 시 programmer 만 재호출하고, qa 스크립트는 재작성하지 않는다.
 - **로그 누락 금지.** 모든 에이전트 호출/반환, 테스트 실행, 흐름 분기에서 반드시 로그를 기록한다.
 
 ## 워크플로우 흐름 제한 (엄수)
@@ -112,7 +119,9 @@ argument-hint: <커밋 번호>
        ↓
 [3. Programmer + QA 스크립트 작성] ← 병렬 실행
        ↓ 둘 다 완료
-[4. QA 실행] ←──── FAIL → Programmer 재호출 → 4로 복귀 (최대 3회)
+[4. QA 실행] ←─┬── 구현 버그 → Programmer 재호출 → 4로 복귀
+       │       └── QA 스크립트 버그 → QA 재호출 → 4로 복귀
+       │       (합산 최대 3회)
        ↓ PASS
 [5. Refactorer]
        ├─ 변경 없음 → [6. 종료]
@@ -123,8 +132,7 @@ argument-hint: <커밋 번호>
 ```
 
 ### 금지되는 전이
-- **QA 재호출**: qa 서브에이전트는 3b 에서 한 번만 호출한다. QA 실패 시 qa 를 다시 호출하지 마라.
 - **Refactorer → Programmer**: refactorer 단계 이후 programmer 를 다시 호출하지 마라. refactorer 의 테스트 실패는 revert 로 처리하고 세션을 종료한다.
-- **QA FAIL → Refactorer**: QA 가 FAIL 이면 반드시 Programmer 로 돌아간다. Refactorer 로 가지 마라.
+- **QA FAIL → Refactorer**: QA 가 FAIL 이면 반드시 원인을 분류하고 Programmer 또는 QA 로 돌아간다. Refactorer 로 가지 마라.
 - **Refactorer → QA**: refactorer 후 QA 를 다시 돌리지 마라. 테스트 통과만 확인하면 된다.
 - **세션 종료 후 추가 호출**: 6번 이후 어떤 에이전트도 호출하지 마라.

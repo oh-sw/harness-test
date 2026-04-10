@@ -7,9 +7,7 @@
       "Edit",
       "Glob",
       "Grep",
-      "Bash(echo:*)",
-      "Bash(printf:*)",
-      "Bash(mkdir -p agent_logs)",
+      "Bash(bash scripts/hn-log.sh*)",
       "Bash(npx vitest run*)",
       "Bash(node qa_test_commit_*)",
       "Bash(npm test:*)"
