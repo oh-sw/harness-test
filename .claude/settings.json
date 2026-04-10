@@ -7,25 +7,22 @@
       "Edit",
       "Glob",
       "Grep",
-      "Bash(ls:*)",
-      "Bash(cat:*)",
       "Bash(echo:*)",
-      "Bash(mkdir -p agent_logs*)",
-      "Bash(echo * >> agent_logs/*)",
-      "Bash(printf * >> agent_logs/*)",
-      "Bash(npx vitest run*)"
+      "Bash(printf:*)",
+      "Bash(mkdir -p agent_logs)",
+      "Bash(npx vitest run*)",
+      "Bash(node qa_test.mjs*)",
+      "Bash(npm test:*)"
     ],
     "deny": [
       "Bash(rm -rf:*)",
       "Bash(git push:*)"
     ]
   },
-  "hooks": {
-    "PostToolUse": [],
-    "PreToolUse": [],
-    "UserPromptSubmit": [],
-    "SessionStart": [],
-    "Stop": []
+  "sandbox": {
+    "filesystem": {
+      "allowWrite": ["./agent_logs"]
+    }
   },
   "env": {
     "PLAYWRIGHT_BROWSERS_PATH": "/tmp/pw-browsers"

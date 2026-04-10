@@ -14,9 +14,9 @@ argument-hint: <커밋 번호>
 
 워크플로우 시작 시 **가장 먼저** 로그 파일을 생성한다.
 
-1. `agent_logs/` 디렉토리가 없으면 Bash 로 `mkdir -p agent_logs` 실행.
+1. `mkdir -p agent_logs` 를 **단독 Bash 명령**으로 실행한다. (`&&` 로 다른 명령과 연결하지 마라)
 2. 로그 파일명: `agent_logs/YYYYMMDD-HHmmss-execute.log` (현재 시각 기준).
-3. 이 파일에 아래 헤더를 기록한다:
+3. 아래 헤더를 **별도 Bash 명령**으로 기록한다 (`echo "..." > agent_logs/...`):
 
 ```
 =====================================
@@ -96,30 +96,45 @@ Output:
    - 존재하지 않으면 → 이것은 **신규 구현**이다.
    - 로그: `[ORCHESTRATOR] plan loaded — commit N 내용 요약`, `mode: new | patch (기존 파일: ...)`
 
-3. **Programmer 루프 (최대 3회 시도)**
-   - `programmer` 서브에이전트를 호출해 해당 커밋의 코드를 작성/수정하게 한다.
-     - programmer 에게는 아래를 전달한다:
-       - plan.md 의 해당 커밋 섹션
-       - **실행 모드**: `new` (신규) 또는 `patch` (재실행)
-       - `patch` 인 경우: 이미 존재하는 파일 목록과 현재 상태 요약
-       - (있다면) 직전 실패 원인
-     - programmer 는 **테스트 코드를 절대 수정할 수 없다**. 프로덕션 코드만 수정한다.
-     - 로그: 호출 전 `[ORCHESTRATOR → programmer]` 입력, 반환 후 `[programmer → ORCHESTRATOR]` 출력.
-   - programmer 가 끝나면 오케스트레이터가 직접 테스트를 실행한다 (Bash).
-     - 로그: `[ORCHESTRATOR] test execution` — 명령, 결과, 실패 시 핵심 로그.
-   - 테스트 통과 시 → 로그에 `[ORCHESTRATOR] decision: tests passed → proceed to QA` 기록 후 4번으로 진행.
-   - 테스트 실패 시 → 로그에 `[ORCHESTRATOR] decision: tests failed → retry programmer (N/3)` 기록 후 programmer 재호출.
-   - 3회 시도해도 실패하면 로그에 `[ORCHESTRATOR] decision: max retries reached → abort` 기록 후 사용자에게 실패 원인을 보고하고 중단한다.
+3. **Programmer + QA 스크립트 작성 (병렬 실행)**
 
-4. **QA 단계**
-   - `qa` 서브에이전트를 호출한다.
-   - qa 에게는 아래를 전달한다:
+   아래 두 에이전트를 **동시에** 호출한다 (Agent 도구를 한 메시지에 두 개 사용):
+
+   **3a. programmer 서브에이전트** — 프로덕션 코드 작성
+   - programmer 에게는 아래를 전달한다:
+     - plan.md 의 해당 커밋 섹션
+     - **실행 모드**: `new` (신규) 또는 `patch` (재실행)
+     - `patch` 인 경우: 이미 존재하는 파일 목록과 현재 상태 요약
+   - programmer 는 **테스트 코드를 절대 수정할 수 없다**. 프로덕션 코드만 수정한다.
+   - 로그: 호출 전 `[ORCHESTRATOR → programmer]` 입력, 반환 후 `[programmer → ORCHESTRATOR]` 출력.
+
+   **3b. qa 서브에이전트** — QA 테스트 스크립트 작성
+   - qa 에게 아래를 전달한다:
+     - `qa-mode`: HTML/CSS/JS 프로젝트 → `browser`, 서버 프로젝트 → `api`
+     - 커밋 번호
      - plan.md 의 해당 커밋 use case 목록
-     - **`qa-mode`**: 이 프로젝트의 스택에 따라 `browser` 또는 `api` 를 지정한다 (HTML/CSS/JS 프로젝트 → `browser`, 서버 프로젝트 → `api`)
-   - qa 는 프로그램을 실제 실행하여 외부에서 관찰 가능한 use case 동작만 검증한다 (내부 코드 리뷰 금지).
+   - qa 는 `qa_test.mjs` 를 작성하고 반환한다 (Bash 권한 없음).
    - 로그: 호출 전 `[ORCHESTRATOR → qa]` 입력, 반환 후 `[qa → ORCHESTRATOR]` 출력.
-   - qa 가 실패를 리포트하면 → 로그에 `[ORCHESTRATOR] decision: QA failed → retry programmer` 기록 후 3번의 programmer 루프로 돌아간다 (시도 카운트는 유지 / 3회 초과 시 중단).
-   - qa 가 통과를 리포트하면 → 로그에 `[ORCHESTRATOR] decision: QA passed → proceed to refactoring` 기록 후 5번으로 진행.
+
+   > **qa 는 plan.md 만 읽고 스크립트를 작성하므로 programmer 와 의존성이 없다.**
+   > qa 스크립트는 한 번만 작성하면 된다. 이후 재시도에서 다시 호출하지 않는다.
+
+4. **QA 실행 루프 (최대 3회 시도)**
+
+   3a(programmer)와 3b(qa) 가 **모두 완료된 후** 이 단계를 시작한다.
+
+   **4a. 오케스트레이터가 QA 스크립트를 실행한다**
+   - `node qa_test.mjs` 를 Bash 로 실행한다.
+   - 로그: `[ORCHESTRATOR] QA script execution` — 실행 명령, stdout 전체, 종료코드.
+
+   **4b. 결과에 따른 분기**
+   - 종료코드 0 (PASS) → 로그에 `[ORCHESTRATOR] decision: QA passed → proceed to refactoring` 기록 후 5번으로 진행.
+   - 종료코드 1 (FAIL) → stdout 의 FAIL 사유를 가지고:
+     - 로그에 `[ORCHESTRATOR] decision: QA failed → retry programmer (N/3)` 기록.
+     - **programmer 만 재호출**한다 (qa 스크립트는 이미 작성 완료, 재작성하지 않음).
+       - programmer 에게 FAIL 사유를 전달한다.
+     - programmer 완료 후 4a 로 돌아가 QA 스크립트를 다시 실행한다.
+     - 3회 시도해도 실패하면 로그에 `[ORCHESTRATOR] decision: max retries reached → abort` 기록 후 사용자에게 실패 원인을 보고하고 중단한다.
 
 5. **Refactorer 단계**
    - `refactorer` 서브에이전트를 호출한다.
@@ -148,7 +163,8 @@ Time: <ISO 8601 타임스탬프>
 ## 제약
 - 직접 프로덕션 코드를 편집하지 마라. 반드시 programmer 또는 refactorer 를 통해야 한다.
 - 직접 use case 를 검증하지 마라. 반드시 qa 를 통해야 한다.
-- 에이전트는 한 번에 하나만 실행한다.
+- **3번(병렬 실행)에서만** programmer 와 qa 를 동시에 실행한다. 그 외에는 에이전트를 한 번에 하나만 실행한다.
+- **qa 서브에이전트는 세션당 한 번만 호출한다.** QA 실패 시 programmer 만 재호출하고, qa 스크립트는 재작성하지 않는다.
 - **로그 누락 금지.** 모든 에이전트 호출/반환, 테스트 실행, 흐름 분기에서 반드시 로그를 기록한다.
 
 ## 워크플로우 흐름 제한 (엄수)
@@ -158,10 +174,9 @@ Time: <ISO 8601 타임스탬프>
 ```
 [2. 컨텍스트 파악]
        ↓
-[3. Programmer] ←──── 테스트 실패 (재시도, 최대 3회)
-       ↓ 테스트 통과
-[4. QA]
-       ├─ FAIL → [3. Programmer] (시도 카운트 유지)
+[3. Programmer + QA 스크립트 작성] ← 병렬 실행
+       ↓ 둘 다 완료
+[4. QA 실행] ←──── FAIL → Programmer 재호출 → 4로 복귀 (최대 3회)
        ↓ PASS
 [5. Refactorer]
        ├─ 변경 없음 → [6. 종료]
@@ -172,7 +187,8 @@ Time: <ISO 8601 타임스탬프>
 ```
 
 ### 금지되는 전이
+- **QA 재호출**: qa 서브에이전트는 3b 에서 한 번만 호출한다. QA 실패 시 qa 를 다시 호출하지 마라.
 - **Refactorer → Programmer**: refactorer 단계 이후 programmer 를 다시 호출하지 마라. refactorer 의 테스트 실패는 revert 로 처리하고 세션을 종료한다.
-- **QA → Refactorer**: QA 가 FAIL 이면 반드시 Programmer 로 돌아간다. Refactorer 로 가지 마라.
+- **QA FAIL → Refactorer**: QA 가 FAIL 이면 반드시 Programmer 로 돌아간다. Refactorer 로 가지 마라.
 - **Refactorer → QA**: refactorer 후 QA 를 다시 돌리지 마라. 테스트 통과만 확인하면 된다.
 - **세션 종료 후 추가 호출**: 6번 이후 어떤 에이전트도 호출하지 마라.
