@@ -41,3 +41,34 @@ export function clampToBounds(fighter) {
 export function stepFighter(fighter) {
   return clampToBounds(applyPhysics(fighter));
 }
+
+/**
+ * Prevents two fighters from occupying overlapping x-space.
+ * When sprites overlap, each fighter is pushed apart by half the overlap distance.
+ * Returns [f1, f2] with adjusted x positions.
+ */
+export function preventOverlap(f1, f2) {
+  const f1Right = f1.x + FIGHTER_W;
+  const f2Right = f2.x + FIGHTER_W;
+
+  if (f1.x < f2Right && f2.x < f1Right) {
+    const overlap = Math.min(f1Right - f2.x, f2Right - f1.x);
+    const half = overlap / 2;
+
+    if (f1.x < f2.x) {
+      // f1 is to the left — push f1 left, f2 right
+      return [
+        clampToBounds({ ...f1, x: f1.x - half }),
+        clampToBounds({ ...f2, x: f2.x + half }),
+      ];
+    } else {
+      // f2 is to the left — push f2 left, f1 right
+      return [
+        clampToBounds({ ...f1, x: f1.x + half }),
+        clampToBounds({ ...f2, x: f2.x - half }),
+      ];
+    }
+  }
+
+  return [f1, f2];
+}

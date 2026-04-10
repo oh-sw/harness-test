@@ -15,7 +15,7 @@ export const MAX_HP = 10;
  * @param {number} opts.x  - Initial x (left edge of sprite)
  * @param {number} opts.groundY - Y coordinate of the ground line (bottom of sprite)
  */
-export function createFighter({ characterId, faceParams, x, groundY }) {
+export function createFighter({ characterId, faceParams, x, groundY, facingRight = true }) {
   return {
     characterId,
     faceParams,
@@ -24,6 +24,14 @@ export function createFighter({ characterId, faceParams, x, groundY }) {
     vy: 0,
     hp: MAX_HP,
     groundY,
+    facingRight,
+    blocking: false,
+    kickCharging: false,
+    kickChargeStartTime: 0,
+    attackState: null,   // 'punch' | 'kick' | null
+    motionEndTime: 0,
+    inputLocked: false,
+    hitConfirmed: false, // prevents the same motion from dealing damage more than once
   };
 }
 
