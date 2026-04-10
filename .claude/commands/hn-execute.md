@@ -11,78 +11,22 @@ argument-hint: <커밋 번호>
 
 ---
 
-## 0. 로그 초기화
+## 0. 로그 — `/hn-log` 스킬 사용
 
-워크플로우 시작 시 **가장 먼저** 로그 파일을 생성한다.
+모든 로그는 **`/hn-log` 스킬**을 통해 기록한다. 직접 `echo >> ...` 를 쓰지 마라.
 
-1. `mkdir -p agent_logs` 를 **단독 Bash 명령**으로 실행한다. (`&&` 로 다른 명령과 연결하지 마라)
-2. 로그 파일명: `agent_logs/YYYYMMDD-HHmmss-execute.log` (현재 시각 기준).
-3. 아래 헤더를 **별도 Bash 명령**으로 기록한다 (`echo "..." > agent_logs/...`):
-
-```
-=====================================
-[hn-execute] Session Start
-Commit: <커밋 번호>
-Time: <ISO 8601 타임스탬프>
-=====================================
-```
-
-이후 모든 단계에서 이 로그 파일에 **append** 한다.
-
-### 로그 기록 명령 (반드시 이 형식을 사용)
-로그 파일 경로를 셸 변수에 저장하지 마라. 매번 **리터럴 경로**를 직접 써라:
-
-```bash
-echo "----- [$(date +%Y-%m-%dT%H:%M:%S%z)] [태그] -----
-본문" >> agent_logs/YYYYMMDD-HHmmss-execute.log
-```
-
-- `>> agent_logs/...` 형태의 단순 echo/printf append 만 사용한다.
-- `LOG=$(cat ...)` 같은 변수 치환을 쓰지 마라.
-- `/tmp` 에 경로를 저장하지 마라.
-
-### 타임스탬프 규칙
-모든 타임스탬프(파일명, 헤더, 로그 엔트리)는 **로컬 타임존**을 사용한다.
-- 파일명: `date +%Y%m%d-%H%M%S`
-- 로그 본문: `date +%Y-%m-%dT%H:%M:%S%z` (예: `2026-04-09T23:15:30+0900`)
-
----
-
-## 로깅 규칙
-
-오케스트레이터는 **자신의 판단·흐름**과 **각 에이전트의 입출력**을 빠짐없이 기록한다.
+1. **세션 시작 시**: `/hn-log init {N}` 을 호출한다. 반환된 로그 파일 경로를 기억한다.
+2. **각 단계마다**: `/hn-log append <로그파일경로> <태그> <본문>` 을 호출한다.
+3. **세션 종료 시**: `/hn-log end <로그파일경로> <결과> <시도횟수> <리팩토링결과>` 를 호출한다.
 
 ### 기록할 항목
 
-| 시점 | 기록 내용 |
-|---|---|
-| 에이전트 호출 직전 | `[ORCHESTRATOR → AGENT] agent=programmer\|qa`, 전달한 입력 요약 (plan 커밋 내용, 실패 로그 등) |
-| 에이전트 반환 직후 | `[AGENT → ORCHESTRATOR] agent=programmer\|qa`, 에이전트가 보고한 결과 요약 (수정 파일, 구현 요약, 검증 결과 등) |
-| 테스트 실행 | `[ORCHESTRATOR] test execution`, 실행 명령, PASS/FAIL, 실패 시 핵심 로그 (최대 50줄) |
-| 흐름 분기 | `[ORCHESTRATOR] decision`, 어떤 판단을 했는지 (재시도, QA 진행, 중단 등) |
-| 세션 종료 | `[hn-execute] Session End`, 최종 결과 (PASS/FAIL), 총 시도 횟수 |
-
-### 로그 포맷
-
-```
------ [YYYY-MM-DDTHH:mm:ss] <태그> -----
-<본문>
-```
-
-예시:
-```
------ [2026-04-09T14:23:01] [ORCHESTRATOR → programmer] -----
-Input:
-  - commit: Commit 2
-  - task: 버튼 클릭 시 카운터 증가 구현
-  - retry: 1/3, previous failure: "counter not incremented on click"
-
------ [2026-04-09T14:23:45] [programmer → ORCHESTRATOR] -----
-Output:
-  - modified: scripts/counter.js
-  - summary: click 이벤트 핸들러 누락 수정, getElementById 셀렉터 오타 교정
-  - notes: 없음
-```
+| 시점 | 태그 | 본문 |
+|---|---|---|
+| 에이전트 호출 직전 | `ORCHESTRATOR → programmer` 또는 `ORCHESTRATOR → qa` | 전달한 입력 요약 |
+| 에이전트 반환 직후 | `programmer → ORCHESTRATOR` 또는 `qa → ORCHESTRATOR` | 결과 요약 (수정 파일, 검증 결과 등) |
+| QA 스크립트 실행 | `ORCHESTRATOR` | 실행 명령, PASS/FAIL, 실패 시 핵심 로그 (최대 50줄) |
+| 흐름 분기 | `ORCHESTRATOR` | 어떤 판단을 했는지 (재시도, QA 진행, 중단 등) |
 
 ---
 
@@ -148,16 +92,7 @@ Output:
      - 테스트 실패 → refactorer 의 변경을 **`git checkout -- <변경파일>`로 되돌리고**, 로그에 `[ORCHESTRATOR] decision: post-refactor tests failed → reverted refactoring` 기록 후 6번으로 진행. (리팩토링 실패로 전체 워크플로우를 중단하지 않는다.)
 
 6. **세션 종료 로그**
-
-```
-=====================================
-[hn-execute] Session End
-Result: PASS | FAIL
-Total programmer attempts: N
-Refactoring: applied | reverted | skipped
-Time: <ISO 8601 타임스탬프>
-=====================================
-```
+   - `/hn-log end <로그파일경로> <결과> <시도횟수> <리팩토링결과>` 를 호출한다.
 
 ---
 
