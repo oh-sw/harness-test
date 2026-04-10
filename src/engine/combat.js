@@ -28,12 +28,21 @@ export function isFacingOpponent(attacker, defender) {
 }
 
 /**
- * Returns true when the two fighters are close enough for the given attack type to land.
+ * Returns true when the two fighters are close enough for the given attack type to land,
+ * AND the defender is on the side the attacker is facing.
+ * This prevents hitting enemies behind you.
  */
 function inRange(attacker, defender, attackType) {
   const reach = attackType === 'kick' ? KICK_REACH : PUNCH_REACH;
   const dist = Math.abs(attacker.x - defender.x);
-  return dist <= FIGHTER_W + reach;
+  if (dist > FIGHTER_W + reach) return false;
+
+  // Defender must be in the direction the attacker is facing
+  if (attacker.facingRight) {
+    return defender.x > attacker.x;
+  } else {
+    return defender.x < attacker.x;
+  }
 }
 
 /**

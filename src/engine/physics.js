@@ -43,11 +43,25 @@ export function stepFighter(fighter) {
 }
 
 /**
+ * Returns true when the fighter is currently airborne (not on the ground).
+ * A fighter is airborne when its y position is above the resting ground position,
+ * or when it has non-zero vertical velocity (ascending jump).
+ */
+function isAirborne(fighter) {
+  return fighter.y < fighter.groundY - FIGHTER_H || fighter.vy !== 0;
+}
+
+/**
  * Prevents two fighters from occupying overlapping x-space.
  * When sprites overlap, each fighter is pushed apart by half the overlap distance.
+ * Overlap is only prevented when BOTH fighters are on the ground — if either is
+ * airborne, the fighters may pass through each other (jump-over allowed).
  * Returns [f1, f2] with adjusted x positions.
  */
 export function preventOverlap(f1, f2) {
+  // Allow pass-through when either fighter is in the air
+  if (isAirborne(f1) || isAirborne(f2)) return [f1, f2];
+
   const f1Right = f1.x + FIGHTER_W;
   const f2Right = f2.x + FIGHTER_W;
 

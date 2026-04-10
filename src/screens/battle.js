@@ -140,8 +140,8 @@ export function initBattleScreen(canvas, { p1: p1Id, p2: p2Id }) {
   function render() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     drawStage(ctx);
-    drawBody(ctx, p1.x, p1.y, p1.faceParams, getActionState(p1));
-    drawBody(ctx, p2.x, p2.y, p2.faceParams, getActionState(p2));
+    drawBody(ctx, p1.x, p1.y, p1.faceParams, getActionState(p1), p1.facingRight);
+    drawBody(ctx, p2.x, p2.y, p2.faceParams, getActionState(p2), p2.facingRight);
     // HUD: face portraits in top corners, standard fighting game pattern
     drawFace(ctx, 50, 80, p1.faceParams, 4);
     drawFace(ctx, 1150, 80, p2.faceParams, 4);
@@ -158,6 +158,7 @@ export function initBattleScreen(canvas, { p1: p1Id, p2: p2Id }) {
       attackState: f.attackState ?? 'idle',
       kickCharging: f.kickCharging,
       inputLocked: f.inputLocked,
+      facingRight: f.facingRight,
     };
   }
 
