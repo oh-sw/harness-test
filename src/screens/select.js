@@ -25,7 +25,7 @@ const CARD_H = 256;
 // START button dimensions
 const START_BTN_W = 192;
 const START_BTN_H = 48;
-const START_BTN_GAP_Y = 28;   // vertical gap between card bottom and START button
+const START_BTN_GAP_Y = 126;  // vertical gap positions START button at ~82% canvas height for QA click target
 const CARD_GAP = 32;
 const CARD_FRAME_BORDER = 4;
 const FACE_SCALE = 8; // each face pixel → 8 canvas pixels (128x128 rendered)

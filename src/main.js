@@ -1,5 +1,6 @@
 // Logical canvas resolution: 1280x720 (HD, 1:1 CSS display).
 import { initSelectScreen } from './screens/select.js';
+import { initBattleScreen } from './screens/battle.js';
 
 const CANVAS_W = 1280;
 const CANVAS_H = 720;
@@ -17,10 +18,8 @@ function init() {
   let destroyCurrent = initSelectScreen(canvas);
 
   canvas.addEventListener('game:start', (evt) => {
-    // Future commits will route to the battle screen here.
-    // For now just log so QA can verify the event fires.
-    console.log('game:start', evt.detail);
     destroyCurrent();
+    destroyCurrent = initBattleScreen(canvas, evt.detail);
   });
 }
 
